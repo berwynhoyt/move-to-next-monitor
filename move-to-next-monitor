@@ -30,10 +30,11 @@ x=$(xwininfo -id "$window_id" | awk '/Absolute upper-left X:/ { print $4 }')
 y=$(xwininfo -id "$window_id" | awk '/Absolute upper-left Y:/ { print $4 }')
 
 # Subtract any offsets caused by panels or window decorations
-x_offset=$(xwininfo -id "$window_id" | awk '/Relative upper-left X:/ { print $4 }')
-y_offset=$(xwininfo -id "$window_id" | awk '/Relative upper-left Y:/ { print $4 }')
-x=$(( x - x_offset))
-y=$(( y - y_offset))
+# only need this if using xdotool to place window; not if using wmctrl
+#x_offset=$(xwininfo -id "$window_id" | awk '/Relative upper-left X:/ { print $4 }')
+#y_offset=$(xwininfo -id "$window_id" | awk '/Relative upper-left Y:/ { print $4 }')
+#x=$(( x - x_offset))
+#y=$(( y - y_offset))
 
 # Compute new X position
 new_x=$((x + display_width))
@@ -62,8 +63,26 @@ if [ "$new_y" -lt 0 ]; then
     new_y=0
 fi
 
+# adjust to match my own needs with vertically stacked monitors of different widths
+
+# monitor1 = top monitor
+# note: assumes the narrowest monitor is at the top
+monitor1_height=1920
+monitor1_width=1200
+new_x="$x"
+new_y="$((monitor1_height + y))"
+if [ "$y" -ge "$monitor1_height" ]; then
+  new_y="$((y - monitor1_height))"
+  if [ "$((x + width))" -gt "$monitor1_width" ]; then
+    new_x=0
+    width="$monitor1_width"
+  fi
+fi
+
+
 # Move the window
-xdotool windowmove "$window_id" "$new_x" "$new_y"
+#xdotool windowmove "$window_id" "$new_x" "$new_y"
+wmctrl -r ":ACTIVE:" -e 0,"$new_x","$new_y","$width","$height"
 
 # Maximize window again, if it was before
 if [ -n "${window_horz_maxed}" ] && [ -n "${window_vert_maxed}" ]; then
