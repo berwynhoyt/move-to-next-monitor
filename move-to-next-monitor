@@ -30,11 +30,17 @@ x=$(xwininfo -id "$window_id" | awk '/Absolute upper-left X:/ { print $4 }')
 y=$(xwininfo -id "$window_id" | awk '/Absolute upper-left Y:/ { print $4 }')
 
 # Subtract any offsets caused by panels or window decorations
-# only need this if using xdotool to place window; not if using wmctrl
+# only need this if using xdotool to *place* the window; not if using wmctrl
 #x_offset=$(xwininfo -id "$window_id" | awk '/Relative upper-left X:/ { print $4 }')
 #y_offset=$(xwininfo -id "$window_id" | awk '/Relative upper-left Y:/ { print $4 }')
 #x=$(( x - x_offset))
 #y=$(( y - y_offset))
+
+# adjust for frame sizes when using wmctrl to get window position
+frame_left=$(xwininfo -id "$window_id" -wm | awk -F'[, \t]+' '/Frame extents/ { print $4 }')
+frame_top=$(xwininfo -id "$window_id" -wm | awk -F'[, \t]+' '/Frame extents/ { print $6 }')
+x="$((x-frame_left))"
+y="$((y-frame_top))"
 
 # Compute new X position
 new_x=$((x + display_width))
@@ -64,7 +70,6 @@ if [ "$new_y" -lt 0 ]; then
 fi
 
 # adjust to match my own needs with vertically stacked monitors of different widths
-
 # note: assumes the narrowest monitor is at the top
 top_monitor_height=1920
 top_monitor_width=1200
@@ -80,7 +85,9 @@ if [ "$y" -ge "$top_monitor_height" ]; then
 fi
 if [ "$((new_y + height))" -gt "$((screen_height - 50))" ]; then
   new_y="$top_monitor_height"
-  height="$((screen_height - top_monitor_height - 50))"
+  if [ "$((new_y + height))" -gt "$((screen_height - 50))" ]; then
+    height="$((bot_monitor_height - 50))"
+  fi
 fi
 
 
@@ -89,6 +96,10 @@ echo "Moving to $new_x,$new_y size $width,$height"
 #xdotool windowmove "$window_id" "$new_x" "$new_y"
 echo wmctrl -r ":ACTIVE:" -e 0,"$new_x","$new_y","$width","$height"
 wmctrl -r ":ACTIVE:" -e 0,"$new_x","$new_y","$width","$height"
+# Workaround: The terminal window sometimes flashes on and off weirdly when moved to a different screen.
+# The following two lines seem to fix it.
+wmctrl -r ":ACTIVE:" -b add,above
+wmctrl -r ":ACTIVE:" -b remove,above
 
 
 # Maximize window again, if it was before
