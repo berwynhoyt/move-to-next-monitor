@@ -65,24 +65,31 @@ fi
 
 # adjust to match my own needs with vertically stacked monitors of different widths
 
-# monitor1 = top monitor
 # note: assumes the narrowest monitor is at the top
-monitor1_height=1920
-monitor1_width=1200
+top_monitor_height=1920
+top_monitor_width=1200
+bot_monitor_height="$((screen_height - top_monitor_height))"
 new_x="$x"
-new_y="$((monitor1_height + y))"
-if [ "$y" -ge "$monitor1_height" ]; then
-  new_y="$((y - monitor1_height))"
-  if [ "$((x + width))" -gt "$monitor1_width" ]; then
+new_y="$((top_monitor_height + y))"
+if [ "$y" -ge "$top_monitor_height" ]; then
+  new_y="$((y - top_monitor_height))"
+  if [ "$((new_x + width))" -gt "$top_monitor_width" ]; then
     new_x=0
-    width="$monitor1_width"
+    width="$top_monitor_width"
   fi
+fi
+if [ "$((new_y + height))" -gt "$((screen_height - 50))" ]; then
+  new_y="$top_monitor_height"
+  height="$((screen_height - top_monitor_height - 50))"
 fi
 
 
 # Move the window
+echo "Moving to $new_x,$new_y size $width,$height"
 #xdotool windowmove "$window_id" "$new_x" "$new_y"
+echo wmctrl -r ":ACTIVE:" -e 0,"$new_x","$new_y","$width","$height"
 wmctrl -r ":ACTIVE:" -e 0,"$new_x","$new_y","$width","$height"
+
 
 # Maximize window again, if it was before
 if [ -n "${window_horz_maxed}" ] && [ -n "${window_vert_maxed}" ]; then
